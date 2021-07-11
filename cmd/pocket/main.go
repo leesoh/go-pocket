@@ -24,7 +24,7 @@ import (
 var version = "0.1"
 
 var defaultItemTemplate = template.Must(template.New("item").Parse(
-	`[{{.ItemID | printf "%9d"}}] {{.Title}} <{{.URL}}>`,
+	`{{.ItemID | printf "%11d"}} [{{.Title}}]({{.URL}})`,
 ))
 
 var configDir string
@@ -46,7 +46,7 @@ func main() {
 	usage := `A Pocket <getpocket.com> client.
 
 Usage:
-  pocket list [--format=<template>] [--domain=<domain>] [--tag=<tag>] [--search=<query>]
+  pocket list [--format=<template>] [--domain=<domain>] [--tag=<tag>] [--search=<query>] [--star]
   pocket archive <item-id>
   pocket add <url> [--title=<title>] [--tags=<tags>]
 
@@ -55,6 +55,7 @@ Options for list:
   -d, --domain <domain>   Filter items by its domain when listing.
   -s, --search <query>    Search query when listing.
   -t, --tag <tag>         Filter items by a tag when listing.
+  -s, --star              Return favourites only.
 
 Options for add:
   --title <title>         A manually specified title for the article
@@ -94,6 +95,7 @@ func (s bySortID) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 
 func commandList(arguments map[string]interface{}, client *api.Client) {
 	options := &api.RetrieveOption{}
+	options.State = api.StateUnread
 
 	if domain, ok := arguments["--domain"].(string); ok {
 		options.Domain = domain
@@ -105,6 +107,10 @@ func commandList(arguments map[string]interface{}, client *api.Client) {
 
 	if tag, ok := arguments["--tag"].(string); ok {
 		options.Tag = tag
+	}
+
+	if _, ok := arguments["--star"].(bool); ok {
+		options.Favorite = api.FavoriteFilterFavorited
 	}
 
 	res, err := client.Retrieve(options)
